@@ -16,7 +16,7 @@ export interface AuthSession {
 export interface SessionDataSource {
 	save(session: AuthSession): MaybePromise<void>;
 	find(id: string): MaybePromise<AuthSession | null>;
-	update(session: Omit<AuthSession, 'userId'>): MaybePromise<void>;
+	update(id: string, expiresAt: Date): MaybePromise<void>;
 	delete(id: string): MaybePromise<void>;
 }
 
@@ -132,7 +132,7 @@ export class BasicAuth {
 		const renew = Date.now() >= session.expiresAt.getTime() - MINUTE_IN_MS * 15;
 		if (renew) {
 			const expiresAt = this.expiresAt;
-			await this.ds.update({ id: sessionId, expiresAt });
+			await this.ds.update(sessionId, expiresAt);
 			session.expiresAt = expiresAt;
 		}
 

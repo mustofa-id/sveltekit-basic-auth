@@ -22,13 +22,13 @@ class InMemorySessionDataSource implements SessionDataSource {
 		return this.store.get(id) || null;
 	}
 
-	update(session: Omit<AuthSession, 'userId'>) {
-		const current = this.store.get(session.id)!;
-		current.expiresAt = session.expiresAt;
-		this.store.set(session.id, current);
+	update(id: string, expiresAt: Date) {
+		const current = this.store.get(id)!;
+		current.expiresAt = expiresAt;
+		this.store.set(id, current);
 	}
 
-	delete(id: AuthSession['id']) {
+	delete(id: string) {
 		this.store.delete(id);
 	}
 }

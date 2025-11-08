@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/mustofa-id/sveltekit-basic-auth"
+		"url": "git+https://github.com/mustofa-id/sveltekit-basic-auth.git"
 	},
 	"author": {
 		"name": "Mustofa",
