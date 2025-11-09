@@ -21,7 +21,7 @@ export const actions = {
 		const passwordValid = await auth.verify(password, user.password);
 		if (!passwordValid) return fail(403, { message: `Invalid username or password` });
 
-		await auth.login(event, user.id);
+		await auth.login(event, user);
 		redirect(303, '/');
 	}
 };
