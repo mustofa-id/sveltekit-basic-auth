@@ -1,3 +1,4 @@
+import { getRequestEvent } from '$app/server';
 import { error, type Handle, type RequestEvent } from '@sveltejs/kit';
 import crypto from 'node:crypto'; // support in most platforms/environments
 
@@ -67,17 +68,19 @@ export class BasicAuth<T extends User = User> {
 		return crypto.timingSafeEqual(storedKey, derivedKey);
 	}
 
-	async login(event: RequestEvent, userId: T['id']): Promise<void> {
+	async login(userId: T['id']): Promise<void> {
+		const event = getRequestEvent();
 		const token = this.generateToken();
 		const sessionId = this.generateSessionId(token);
-		const expiresAt = this.expiresAt;
+		const expiresAt = this.expirationDate;
 		await this.ds.save({ id: sessionId, userId, expiresAt });
 		this.setCookie(event, token, expiresAt);
 	}
 
-	async logout(event: RequestEvent): Promise<void> {
+	async logout(): Promise<void> {
+		const event = getRequestEvent();
 		const session = event.locals.session;
-		if (!session) error(401);
+		if (!session) error(412, 'No active session');
 		await this.ds.delete(session.id);
 		this.delCookie(event);
 	}
@@ -111,7 +114,7 @@ export class BasicAuth<T extends User = User> {
 		return this.config?.cookieOptions || { name: 'sid', path: '/' };
 	}
 
-	private get expiresAt() {
+	private get expirationDate() {
 		return new Date(Date.now() + MINUTE_IN_MS * (this.config?.expiresIn || DEFAULTS.expiresIn));
 	}
 
@@ -139,7 +142,7 @@ export class BasicAuth<T extends User = User> {
 
 		const renew = Date.now() >= session.expiresAt.getTime() - MINUTE_IN_MS * 15;
 		if (renew) {
-			const expiresAt = this.expiresAt;
+			const expiresAt = this.expirationDate;
 			await this.ds.update(sessionId, expiresAt);
 			session.expiresAt = expiresAt;
 		}

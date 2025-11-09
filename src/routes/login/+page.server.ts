@@ -7,8 +7,8 @@ export function load({ locals }) {
 }
 
 export const actions = {
-	default: async (event) => {
-		const fd = await event.request.formData();
+	default: async ({ request }) => {
+		const fd = await request.formData();
 		const username = fd.get('username')?.toString();
 		const password = fd.get('password')?.toString();
 		if (!username || !password) {
@@ -21,7 +21,7 @@ export const actions = {
 		const passwordValid = await auth.verify(password, user.password);
 		if (!passwordValid) return fail(403, { message: `Invalid username or password` });
 
-		await auth.login(event, user.id);
+		await auth.login(user.id);
 		redirect(303, '/');
 	}
 };
