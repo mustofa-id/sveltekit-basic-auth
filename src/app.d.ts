@@ -4,7 +4,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			session: import('$lib/index.ts').AuthSession<import('./routes/auth.server.ts').User> | null;
+			session: import('./routes/auth.server.ts').UserSession | null;
 		}
 		// interface PageData {}
 		// interface PageState {}

@@ -7,14 +7,22 @@ type CookieOptions = Omit<Parameters<RequestEvent['cookies']['set']>[2], 'expire
 	name: string;
 };
 
-export interface AuthSession<T = unknown> {
+interface User {
+	id: unknown;
+}
+
+export interface AuthSession<T extends User = User> {
 	id: string;
 	user: T;
 	expiresAt: Date;
 }
 
-export interface SessionDataSource<T = unknown> {
-	save(session: AuthSession<T>): MaybePromise<void>;
+export type SaveAuthSession<T extends User = User> = Omit<AuthSession, 'user'> & {
+	userId: T['id'];
+};
+
+export interface SessionDataSource<T extends User = User> {
+	save(session: SaveAuthSession<T>): MaybePromise<void>;
 	find(id: string): MaybePromise<AuthSession<T> | null>;
 	update(id: string, expiresAt: Date): MaybePromise<void>;
 	delete(id: string): MaybePromise<void>;
@@ -34,7 +42,7 @@ async function scrypt(value: string, salt: Buffer<ArrayBuffer>, length: number) 
 	});
 }
 
-export class BasicAuth<T = unknown> {
+export class BasicAuth<T extends User = User> {
 	constructor(
 		private readonly ds: SessionDataSource<T>,
 		private readonly config?: {
@@ -59,11 +67,11 @@ export class BasicAuth<T = unknown> {
 		return crypto.timingSafeEqual(storedKey, derivedKey);
 	}
 
-	async login(event: RequestEvent, user: T): Promise<void> {
+	async login(event: RequestEvent, userId: T['id']): Promise<void> {
 		const token = this.generateToken();
 		const sessionId = this.generateSessionId(token);
 		const expiresAt = this.expiresAt;
-		await this.ds.save({ id: sessionId, user, expiresAt });
+		await this.ds.save({ id: sessionId, userId, expiresAt });
 		this.setCookie(event, token, expiresAt);
 	}
 
