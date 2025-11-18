@@ -1,6 +1,8 @@
 import { getRequestEvent } from '$app/server';
 import { error, type Handle, type RequestEvent } from '@sveltejs/kit';
 import crypto from 'node:crypto'; // support in most platforms/environments
+import type { PathLike } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -41,6 +43,66 @@ async function scrypt(value: string, salt: Buffer<ArrayBuffer>, length: number) 
 			resolve(derivedKey);
 		});
 	});
+}
+
+export class SQLiteSessionDataSource<T extends User> implements SessionDataSource<T> {
+	private readonly db: DatabaseSync;
+
+	constructor(
+		private readonly config: {
+			/** The database file path. Defaults to (shared) memory. */
+			path?: PathLike;
+			getUser: (id: T['id']) => MaybePromise<T>;
+		}
+	) {
+		this.db = new DatabaseSync(config.path || 'file:sba?mode=memory&cache=shared');
+		this.db.exec(`
+			-- setting pragmas
+			PRAGMA foreign_keys = ON;
+			PRAGMA journal_mode = WAL;
+			PRAGMA synchronous = NORMAL;
+			PRAGMA busy_timeout = 5000;
+
+			-- define auth sessions table
+			create table if not exists auth_sessions (
+				id text primary key,
+				user text not null,
+				expires_at integer not null
+			);
+		`);
+	}
+
+	async save(session: SaveAuthSession<T>): Promise<void> {
+		const user = this.config.getUser(session.userId);
+		this.db
+			.prepare(`insert into auth_sessions (id, user, expires_at) values (:id, :user, :expires_at)`)
+			.run({
+				id: session.id,
+				user: JSON.stringify(user),
+				expires_at: session.expiresAt.getTime()
+			});
+	}
+
+	find(id: string): AuthSession<T> | null {
+		const session = this.db.prepare(`select * from auth_sessions where id = ?`).get(id);
+		if (!session) return null;
+		return {
+			id: session.id as string,
+			user: JSON.parse(session.user as string),
+			expiresAt: new Date(session.expires_at as number)
+		};
+	}
+
+	update(id: string, expiresAt: Date): void {
+		this.db.prepare(`update auth_sessions set expires_at = :expires_at where id = :id`).run({
+			id: id,
+			expires_at: expiresAt.getTime()
+		});
+	}
+
+	delete(id: string): void {
+		this.db.prepare(`delete from auth_sessions where id = ?`).run(id);
+	}
 }
 
 export class BasicAuth<T extends User = User> {

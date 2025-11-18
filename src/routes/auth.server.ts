@@ -1,12 +1,7 @@
 /** usage example */
 
 import { getRequestEvent } from '$app/server';
-import {
-	BasicAuth,
-	type AuthSession,
-	type SaveAuthSession,
-	type SessionDataSource
-} from '$lib/index.js';
+import { BasicAuth, SQLiteSessionDataSource, type AuthSession } from '$lib/index.js';
 import { redirect } from '@sveltejs/kit';
 
 export interface User {
@@ -20,32 +15,13 @@ export type UserSession = AuthSession<User>;
 
 export const users: User[] = [];
 
-const sessions = new Map<string, SaveAuthSession<User>>();
-
-const inMemoryDataSource: SessionDataSource<User> = {
-	save(session) {
-		sessions.set(session.id, session);
-	},
-	find(id) {
-		const session = sessions.get(id);
-		if (!session) return null;
-		return {
-			id: session.id,
-			user: users.find((u) => u.id == session.userId)!,
-			expiresAt: session.expiresAt
-		};
-	},
-	update(id, expiresAt) {
-		const curr = sessions.get(id)!;
-		curr.expiresAt = expiresAt;
-		sessions.set(id, curr);
-	},
-	delete(id) {
-		sessions.delete(id);
+const dataSource = new SQLiteSessionDataSource<User>({
+	getUser(id) {
+		return users.find((u) => u.id == id)!;
 	}
-};
+});
 
-export const auth = new BasicAuth(inMemoryDataSource);
+export const auth = new BasicAuth(dataSource);
 
 users.push({
 	id: '81fa185f6a5343c4',
