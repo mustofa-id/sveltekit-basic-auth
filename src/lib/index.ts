@@ -1,8 +1,8 @@
 import { getRequestEvent } from '$app/server';
 import { error, type Handle, type RequestEvent } from '@sveltejs/kit';
-import crypto from 'node:crypto'; // support in most platforms/environments
+import crypto from 'node:crypto';
 import type { PathLike } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -46,7 +46,8 @@ async function scrypt(value: string, salt: Buffer<ArrayBuffer>, length: number) 
 }
 
 export class SQLiteSessionDataSource<T extends User> implements SessionDataSource<T> {
-	private readonly db: DatabaseSync;
+	readonly db: DatabaseSync;
+	readonly tableName = 'auth_sessions';
 
 	constructor(
 		private readonly config: {
@@ -55,7 +56,7 @@ export class SQLiteSessionDataSource<T extends User> implements SessionDataSourc
 			getUser: (id: T['id']) => MaybePromise<T>;
 		}
 	) {
-		this.db = new DatabaseSync(config.path || 'file:sba?mode=memory&cache=shared');
+		this.db = new DatabaseSync(config.path || 'file:sba-db0?mode=memory&cache=shared');
 		this.db.exec(`
 			-- setting pragmas
 			PRAGMA foreign_keys = ON;
@@ -64,18 +65,22 @@ export class SQLiteSessionDataSource<T extends User> implements SessionDataSourc
 			PRAGMA busy_timeout = 5000;
 
 			-- define auth sessions table
-			create table if not exists auth_sessions (
+			create table if not exists ${this.tableName} (
 				id text primary key,
 				user text not null,
 				expires_at integer not null
 			);
 		`);
+		Object.freeze(this);
 	}
 
 	async save(session: SaveAuthSession<T>): Promise<void> {
-		const user = this.config.getUser(session.userId);
+		const user = await this.config.getUser(session.userId);
 		this.db
-			.prepare(`insert into auth_sessions (id, user, expires_at) values (:id, :user, :expires_at)`)
+			.prepare(
+				`insert into ${this.tableName} (id, user, expires_at) 
+				values (:id, :user, :expires_at)`
+			)
 			.run({
 				id: session.id,
 				user: JSON.stringify(user),
@@ -84,24 +89,37 @@ export class SQLiteSessionDataSource<T extends User> implements SessionDataSourc
 	}
 
 	find(id: string): AuthSession<T> | null {
-		const session = this.db.prepare(`select * from auth_sessions where id = ?`).get(id);
-		if (!session) return null;
-		return {
-			id: session.id as string,
-			user: JSON.parse(session.user as string),
-			expiresAt: new Date(session.expires_at as number)
-		};
+		const result = this.db.prepare(`select * from ${this.tableName} where id = ?`).get(id);
+		if (!result) return null;
+		return this.toSession(result);
+	}
+
+	findAll(config?: { page?: number; size?: number }): AuthSession<T>[] {
+		const { page = 1, size = 20 } = config || {};
+		const offset = (page - 1) * size;
+		return this.db
+			.prepare(`select * from ${this.tableName} order by expires_at limit ? offset ?`)
+			.all(size, offset)
+			.map(this.toSession);
 	}
 
 	update(id: string, expiresAt: Date): void {
-		this.db.prepare(`update auth_sessions set expires_at = :expires_at where id = :id`).run({
+		this.db.prepare(`update ${this.tableName} set expires_at = :expires_at where id = :id`).run({
 			id: id,
 			expires_at: expiresAt.getTime()
 		});
 	}
 
 	delete(id: string): void {
-		this.db.prepare(`delete from auth_sessions where id = ?`).run(id);
+		this.db.prepare(`delete from ${this.tableName} where id = ?`).run(id);
+	}
+
+	private toSession(row: Record<string, SQLOutputValue>): AuthSession<T> {
+		return {
+			id: row.id as string,
+			user: JSON.parse(row.user as string),
+			expiresAt: new Date(row.expires_at as number)
+		};
 	}
 }
 
@@ -145,6 +163,11 @@ export class BasicAuth<T extends User = User> {
 		if (!session) error(412, 'No active session');
 		await this.ds.delete(session.id);
 		this.delCookie(event);
+	}
+
+	async kill(sessionId: string): Promise<void> {
+		// only delete session, cookie will invalidated on hook
+		await this.ds.delete(sessionId);
 	}
 
 	hook: Handle = async ({ event, resolve }) => {
