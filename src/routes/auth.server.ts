@@ -15,13 +15,13 @@ export type UserSession = AuthSession<User>;
 
 export const users: User[] = [];
 
-const dataSource = new SQLiteSessionDataSource<User>({
+export const sessionDataSource = new SQLiteSessionDataSource<User>({
 	getUser(id) {
 		return users.find((u) => u.id == id)!;
 	}
 });
 
-export const auth = new BasicAuth(dataSource);
+export const auth = new BasicAuth(sessionDataSource);
 
 users.push({
 	id: '81fa185f6a5343c4',
