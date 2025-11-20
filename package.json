@@ -1,6 +1,6 @@
 {
 	"name": "sveltekit-basic-auth",
-	"version": "0.0.1",
+	"version": "0.0.0",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/mustofa-id/sveltekit-basic-auth.git"
