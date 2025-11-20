@@ -2,4 +2,4 @@
 'sveltekit-basic-auth': patch
 ---
 
-Initial release
+Initial package release
