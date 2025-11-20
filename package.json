@@ -21,7 +21,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "npm run test:unit -- --run",
+		"release": "changeset publish"
 	},
 	"files": [
 		"dist",
@@ -44,6 +45,7 @@
 		"svelte": "^5.0.0"
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.29.7",
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.38.0",
 		"@sveltejs/adapter-auto": "^7.0.0",
