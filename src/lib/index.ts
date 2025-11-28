@@ -201,8 +201,9 @@ export class BasicAuth<T extends User = User> {
 		event.cookies.delete(name, opts);
 	}
 
-	private get cookieOptions() {
-		return this.config?.cookieOptions || { name: 'sid', path: '/' };
+	private get cookieOptions(): CookieOptions {
+		const defaults: CookieOptions = { name: 'sid', path: '/', httpOnly: true };
+		return { ...defaults, ...this.config?.cookieOptions };
 	}
 
 	private get expirationDate() {
