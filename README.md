@@ -1,6 +1,16 @@
 # SvelteKit Basic Auth
 
-This is a SvelteKit library that provides basic auth utilities
+A lightweight authentication helper library for SvelteKit. Suited for non-critical, low-complexity, or internal environments where lightweight authentication utilities are appropriate.
+
+This library is intentionally minimal, good for quick prototypes, admin tools, or low-complexity apps. For production-grade or large-scale authentication needs, consider a more robust solution such as [Auth.js](https://authjs.dev/), which provides advanced security features, adapters, and wide ecosystem support.
+
+## Usage
+
+```sh
+npm install sveltekit-basic-auth
+```
+
+See code example in [routes](src/routes) and [hooks.server.ts](src/hooks.server.ts).
 
 ## Developing
 

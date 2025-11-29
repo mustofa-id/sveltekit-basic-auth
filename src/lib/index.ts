@@ -148,11 +148,17 @@ export class BasicAuth<T extends User = User> {
 		return crypto.timingSafeEqual(storedKey, derivedKey);
 	}
 
-	async login(userId: T['id']): Promise<void> {
+	async login(userId: T['id'], remember?: boolean): Promise<void> {
 		const event = getRequestEvent();
 		const token = this.generateToken();
 		const sessionId = this.generateSessionId(token);
-		const expiresAt = this.expirationDate;
+		let expiresAt = this.expirationDate;
+
+		if (remember) {
+			expiresAt = new Date();
+			expiresAt.setMonth(new Date().getMonth() + 3);
+		}
+
 		await this.ds.save({ id: sessionId, userId, expiresAt });
 		this.setCookie(event, token, expiresAt);
 	}
@@ -195,8 +201,9 @@ export class BasicAuth<T extends User = User> {
 		event.cookies.delete(name, opts);
 	}
 
-	private get cookieOptions() {
-		return this.config?.cookieOptions || { name: 'sid', path: '/' };
+	private get cookieOptions(): CookieOptions {
+		const defaults: CookieOptions = { name: 'sid', path: '/', httpOnly: true };
+		return { ...defaults, ...this.config?.cookieOptions };
 	}
 
 	private get expirationDate() {

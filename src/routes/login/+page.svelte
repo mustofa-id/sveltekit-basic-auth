@@ -15,6 +15,11 @@
 		<input type="password" name="password" placeholder="Password" required />
 	</label>
 
+	<label style="display: block;">
+		<input type="checkbox" name="remember" />
+		<span>Keep login on this device</span>
+	</label>
+
 	<section>
 		<button>Login</button>
 	</section>
