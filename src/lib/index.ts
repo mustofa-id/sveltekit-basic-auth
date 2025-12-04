@@ -129,7 +129,7 @@ export class BasicAuth<T extends User = User> {
 		private readonly config?: {
 			/** Session expiration in minutes; defaults to 1440. */
 			expiresIn?: number;
-			cookieOptions?: CookieOptions;
+			cookieOptions?: Partial<CookieOptions>;
 		}
 	) {}
 
