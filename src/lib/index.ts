@@ -36,6 +36,16 @@ const MINUTE_IN_MS = 60_000;
 const SCRYPT = { saltLength: 16, keyLength: 64, tag: 'scrypt', sep: '$' };
 const DEFAULTS = { cookieName: 'sid', expiresIn: 1440 };
 
+/**
+ * @internal
+ * Derive the persisted session identifier from an opaque token.
+ */
+export function generateSessionId(token: string): string {
+	const buf = Buffer.from(ENCODER.encode(token));
+	const digest = crypto.createHash('sha256').update(buf).digest();
+	return Buffer.from(digest).toString('hex');
+}
+
 async function scrypt(value: string, salt: Buffer<ArrayBuffer>, length: number) {
 	return new Promise<Buffer<ArrayBufferLike>>((resolve, reject) => {
 		crypto.scrypt(value, salt, length, (err, derivedKey) => {
@@ -151,7 +161,7 @@ export class BasicAuth<T extends User = User> {
 	async login(userId: T['id'], remember?: boolean): Promise<void> {
 		const event = getRequestEvent();
 		const token = this.generateToken();
-		const sessionId = this.generateSessionId(token);
+		const sessionId = generateSessionId(token);
 		let expiresAt = this.expirationDate;
 
 		if (remember) {
@@ -215,14 +225,8 @@ export class BasicAuth<T extends User = User> {
 		return Buffer.from(bytes).toString('base64url');
 	}
 
-	private generateSessionId(token: string): string {
-		const buf = Buffer.from(ENCODER.encode(token));
-		const digest = crypto.createHash('sha256').update(buf).digest();
-		return Buffer.from(digest).toString('hex');
-	}
-
 	private async validateSession(token: string) {
-		const sessionId = this.generateSessionId(token);
+		const sessionId = generateSessionId(token);
 		const session = await this.ds.find(sessionId);
 		if (!session) return null;
 
