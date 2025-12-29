@@ -1,5 +1,5 @@
 ---
-"@fake-scope/fake-pkg": patch
+'sveltekit-basic-auth': patch
 ---
 
-Add test
+Add tests
