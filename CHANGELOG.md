@@ -1,5 +1,12 @@
 # sveltekit-basic-auth
 
+## 0.0.3
+
+### Patch Changes
+
+- 2e0454c: Add tests
+- 51243ab: Make cookie options props optional
+
 ## 0.0.2
 
 ### Patch Changes
