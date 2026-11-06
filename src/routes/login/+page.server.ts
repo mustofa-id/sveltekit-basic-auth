@@ -1,17 +1,18 @@
 import { fail, redirect } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 import { auth, users } from '../auth.server.js';
 
-export function load({ locals }) {
+export const load: PageServerLoad = ({ locals }) => {
 	if (locals.session?.id) redirect(303, `/`);
 	return {};
-}
+};
 
-export const actions = {
+export const actions: Actions = {
 	default: async ({ request }) => {
 		const fd = await request.formData();
-		const username = fd.get('username')?.toString();
-		const password = fd.get('password')?.toString();
-		if (!username || !password) {
+		const username = fd.get('username');
+		const password = fd.get('password');
+		if (typeof username !== 'string' || typeof password !== 'string' || !username || !password) {
 			return fail(400, { message: `Username and password are required` });
 		}
 

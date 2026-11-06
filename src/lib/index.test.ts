@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vite-plus/test';
 import type { RequestEvent } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 
-import { BasicAuth, SQLiteSessionDataSource, generateSessionId, type AuthSession } from './index';
+import { BasicAuth, SQLiteSessionDataSource, generateSessionId } from './index.js';
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: vi.fn()
@@ -154,7 +154,7 @@ describe('BasicAuth', () => {
 			id: sessionId,
 			user: { id: 'user-4', name: 'User user-4' },
 			expiresAt: new Date()
-		} as AuthSession;
+		} as unknown as typeof event.locals.session;
 
 		await auth.logout();
 

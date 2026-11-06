@@ -1,12 +1,13 @@
+import { error, type RequestEvent } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { getRequestEvent } from '$app/server';
-import { error, type Handle, type RequestEvent } from '@sveltejs/kit';
 import crypto from 'node:crypto';
 import type { PathLike } from 'node:fs';
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
 
 type MaybePromise<T> = T | Promise<T>;
 
-type CookieOptions = Omit<Parameters<RequestEvent['cookies']['set']>[2], 'expires'> & {
+type CookieOptions = Omit<NonNullable<Parameters<RequestEvent['cookies']['set']>[2]>, 'expires'> & {
 	name: string;
 };
 
@@ -19,7 +20,6 @@ export interface AuthSession<T extends User = User> {
 	user: T;
 	expiresAt: Date;
 }
-
 export type SaveAuthSession<T extends User = User> = Omit<AuthSession, 'user'> & {
 	userId: T['id'];
 };
@@ -110,14 +110,13 @@ export class SQLiteSessionDataSource<T extends User> implements SessionDataSourc
 		return this.db
 			.prepare(`select * from ${this.tableName} order by expires_at limit ? offset ?`)
 			.all(size, offset)
-			.map(this.toSession);
+			.map((row) => this.toSession(row));
 	}
 
 	update(id: string, expiresAt: Date): void {
-		this.db.prepare(`update ${this.tableName} set expires_at = :expires_at where id = :id`).run({
-			id: id,
-			expires_at: expiresAt.getTime()
-		});
+		this.db
+			.prepare(`update ${this.tableName} set expires_at = :expires_at where id = :id`)
+			.run({ id, expires_at: expiresAt.getTime() });
 	}
 
 	delete(id: string): void {
