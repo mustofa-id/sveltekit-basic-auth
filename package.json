@@ -12,14 +12,12 @@
 	},
 	"scripts": {
 		"dev": "vp dev",
-		"build": "vp build && pnpm run prepack",
+		"build": "vp build && vp run prepack",
 		"preview": "vp preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "svelte-kit sync && svelte-package && publint",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"format": "vp fmt .",
-		"lint": "vp fmt --check . && vp lint .",
 		"test:unit": "vp test",
 		"test": "vp test --run",
 		"release": "changeset publish"
