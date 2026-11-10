@@ -50,7 +50,6 @@
 		"@sveltejs/package": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/node": "^22",
-		"eslint-plugin-svelte": "^3.12.4",
 		"publint": "^0.3.14",
 		"svelte": "^5.57.2",
 		"svelte-check": "^4.7.5",
