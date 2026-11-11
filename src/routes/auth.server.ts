@@ -1,8 +1,6 @@
 /** usage example */
 
-import { getRequestEvent } from '$app/server';
 import { BasicAuth, SQLiteSessionDataSource, type AuthSession } from '#lib/index.js';
-import { redirect } from '@sveltejs/kit';
 
 export interface User {
 	id: string;
@@ -39,12 +37,3 @@ users.push({
 	username: 'admin',
 	password: await auth.hash('Admin2025')
 });
-
-export function requiredUser() {
-	const { locals, route } = getRequestEvent();
-	if (!locals.session?.user && typeof route.id == 'string' && route.id != '/login') {
-		// make sure to check current route to prevent redirect loop
-		redirect(303, '/login');
-	}
-	return locals.session?.user;
-}

@@ -1,15 +1,16 @@
 import { fail } from '@sveltejs/kit';
+import { auth, sessionDataSource } from '../auth.server.js';
 import type { Actions, PageServerLoad } from './$types';
-import { auth, requiredUser, sessionDataSource } from '../auth.server.js';
 
 export const load: PageServerLoad = () => {
-	requiredUser();
+	auth.requireUser();
 	const sessions = sessionDataSource.findAll();
 	return { sessions };
 };
 
 export const actions: Actions = {
 	kill: async ({ request }) => {
+		auth.requireUser();
 		const fd = await request.formData();
 		const sessionId = fd.get('sessionId');
 		if (typeof sessionId !== 'string' || !sessionId) {

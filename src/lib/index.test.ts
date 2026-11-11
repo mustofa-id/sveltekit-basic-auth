@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { describe, it, expect, vi, afterEach } from 'vite-plus/test';
-import type { RequestEvent } from '@sveltejs/kit';
+import { isRedirect, type RequestEvent } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 
 import { BasicAuth, SQLiteSessionDataSource, generateSessionId } from './index.js';
@@ -10,6 +10,12 @@ vi.mock('$app/server', () => ({
 }));
 
 type MockUser = { id: string; name: string };
+
+type MockSession = {
+	id: string;
+	user: MockUser;
+	expiresAt: Date;
+};
 
 afterEach(() => {
 	vi.clearAllMocks();
@@ -35,11 +41,14 @@ class MockCookies {
 	}
 }
 
-function createRequestEvent(): { event: RequestEvent; cookies: MockCookies } {
+function createRequestEvent(
+	options: { routeId?: string | null; session?: MockSession | null } = {}
+): { event: RequestEvent; cookies: MockCookies } {
 	const cookies = new MockCookies();
 	const event = {
 		cookies,
-		locals: { session: null }
+		locals: { session: options.session ?? null },
+		route: { id: options.routeId === undefined ? '/sessions' : options.routeId }
 	} as unknown as RequestEvent;
 	return { event, cookies };
 }
@@ -160,5 +169,70 @@ describe('BasicAuth', () => {
 
 		expect(ds.find(sessionId)).toBeNull();
 		expect(cookies.lastDeleted?.name).toBe('sid');
+	});
+});
+
+describe('requireUser', () => {
+	it('returns the user when a session exists', () => {
+		const auth = new BasicAuth(createDataSource());
+		const user = { id: 'user-5', name: 'User user-5' };
+		const { event } = createRequestEvent({
+			routeId: '/sessions',
+			session: { id: 'session-1', user, expiresAt: new Date() }
+		});
+		vi.mocked(getRequestEvent).mockReturnValue(event);
+
+		expect(auth.requireUser()).toEqual(user);
+	});
+
+	it('redirects to the login route when there is no session', () => {
+		const auth = new BasicAuth(createDataSource());
+		const { event } = createRequestEvent({ routeId: '/sessions' });
+		vi.mocked(getRequestEvent).mockReturnValue(event);
+
+		let thrown: unknown;
+		try {
+			auth.requireUser();
+		} catch (error) {
+			thrown = error;
+		}
+
+		expect(isRedirect(thrown)).toBe(true);
+		if (isRedirect(thrown)) {
+			expect(thrown.status).toBe(303);
+			expect(thrown.location).toBe('/login');
+		}
+	});
+
+	it('does not redirect on the login route', () => {
+		const auth = new BasicAuth(createDataSource());
+		const { event } = createRequestEvent({ routeId: '/login' });
+		vi.mocked(getRequestEvent).mockReturnValue(event);
+
+		expect(auth.requireUser()).toBeUndefined();
+	});
+
+	it('does not redirect when the route is unknown', () => {
+		const auth = new BasicAuth(createDataSource());
+		const { event } = createRequestEvent({ routeId: null });
+		vi.mocked(getRequestEvent).mockReturnValue(event);
+
+		expect(auth.requireUser()).toBeUndefined();
+	});
+
+	it('uses the login route from the constructor config', () => {
+		const auth = new BasicAuth(createDataSource(), { loginRouteId: '/sessions' });
+		const { event } = createRequestEvent({ routeId: '/login' });
+		vi.mocked(getRequestEvent).mockReturnValue(event);
+
+		let thrown: unknown;
+		try {
+			auth.requireUser();
+		} catch (error) {
+			thrown = error;
+		}
+
+		expect(isRedirect(thrown)).toBe(true);
+		if (isRedirect(thrown)) expect(thrown.location).toBe('/sessions');
 	});
 });
