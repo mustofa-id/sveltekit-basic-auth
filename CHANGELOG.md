@@ -1,5 +1,12 @@
 # sveltekit-basic-auth
 
+## 0.0.4
+
+### Patch Changes
+
+- 8b53173: Add `requireUser()` method
+- 4c1090c: Migrate to Vite+
+
 ## 0.0.3
 
 ### Patch Changes
