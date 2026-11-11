@@ -1,6 +1,8 @@
-import { error, type RequestEvent } from '@sveltejs/kit';
-import type { Handle } from '@sveltejs/kit/hooks';
+import { resolve } from '$app/paths';
 import { getRequestEvent } from '$app/server';
+import type { RouteId } from '$app/types';
+import { error, redirect, type RequestEvent } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import crypto from 'node:crypto';
 import type { PathLike } from 'node:fs';
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
@@ -139,6 +141,8 @@ export class BasicAuth<T extends User = User> {
 			/** Session expiration in minutes; defaults to 1440. */
 			expiresIn?: number;
 			cookieOptions?: Partial<CookieOptions>;
+			/** Login route id used by `requireUser`; defaults to '/login'. */
+			loginRouteId?: RouteId;
 		}
 	) {}
 
@@ -199,6 +203,26 @@ export class BasicAuth<T extends User = User> {
 		event.locals.session = session as typeof event.locals.session;
 		return resolve(event);
 	};
+
+	/**
+	 * Returns the authenticated user for the current request.
+	 *
+	 * Redirects to `loginRouteId` when there is no active session. The redirect is
+	 * skipped on the login route itself to prevent a redirect loop, in which case
+	 * this returns `undefined`.
+	 *
+	 * Must be called from server-side code such as a `load` function, an action,
+	 * or a hook.
+	 */
+	requireUser(): T | undefined {
+		const { locals, route } = getRequestEvent();
+		const loginRoute = this.config?.loginRouteId || '/login';
+		if (!locals.session?.user && typeof route.id == 'string' && route.id != loginRoute) {
+			// make sure to check current route to prevent redirect loop
+			redirect(303, resolve(loginRoute));
+		}
+		return locals.session?.user as T | undefined;
+	}
 
 	private setCookie(event: RequestEvent, token: string, expiresAt: Date) {
 		const { name, ...opts } = this.cookieOptions;

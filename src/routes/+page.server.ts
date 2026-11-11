@@ -1,6 +1,6 @@
-import { requiredUser } from './auth.server.js';
+import { auth } from './auth.server.js';
 
 export function load() {
-	const user = requiredUser();
+	const user = auth.requireUser();
 	return { user };
 }
