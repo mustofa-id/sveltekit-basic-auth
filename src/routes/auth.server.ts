@@ -1,7 +1,7 @@
 /** usage example */
 
 import { getRequestEvent } from '$app/server';
-import { BasicAuth, SQLiteSessionDataSource, type AuthSession } from '$lib/index.js';
+import { BasicAuth, SQLiteSessionDataSource, type AuthSession } from '#lib/index.js';
 import { redirect } from '@sveltejs/kit';
 
 export interface User {
